@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package weather;
+
+// Minimal service per requirements: only current weather retrieval.
+service WeatherService {
+  rpc GetCurrentWeather (GetWeatherRequest) returns (GetWeatherResponse);
+}
+
+message GetWeatherRequest { string city = 1; }
+
+message GetWeatherResponse {
+  string city = 1;
+  double temp_c = 2;
+  int32 humidity_pct = 3;
+  string conditions = 4;
+  double wind_speed_ms = 5; // optional; default 0 if missing
+  string fetched_at_iso = 6; // ISO8601 UTC timestamp
+}
