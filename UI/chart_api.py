@@ -18,6 +18,7 @@ from core.settings import settings
 
 from UI.api.routers.series import router as series_router
 from UI.api.routers.daily import router as daily_router
+from UI.api.routers.current import router as current_router
 
 settings.configure_logging()
 logger = logging.getLogger("ui.chart")
@@ -36,3 +37,4 @@ def root():
 # Attach routers providing /api/series and /api/daily
 app.include_router(series_router)
 app.include_router(daily_router)
+app.include_router(current_router)

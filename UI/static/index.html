@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Weather Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0f1115;
@@ -20,7 +23,7 @@
       --bg: #f6f8fb; --panel:#ffffff; --text:#222; --accent:#1976d2; --danger:#d32f2f; --ok:#2e7d32; --border:#d7dce4; --muted:#606c76;
     }
     * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; background: var(--bg); color: var(--text); }
+    body { margin:0; font-family: Inter, system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; background: radial-gradient(circle at 20% 20%, #12141a, #0d0f13 55%); color: var(--text); }
     header { padding:1rem 1.25rem; display:flex; align-items:center; gap:1rem; justify-content:space-between; border-bottom:1px solid var(--border); backdrop-filter: blur(6px); position:sticky; top:0; background:linear-gradient(to right, rgba(15,17,21,.9),rgba(15,17,21,.75)); }
     h1 { font-size:1.1rem; margin:0; letter-spacing:.5px; font-weight:600; }
     main { padding:1.2rem; max-width:1200px; margin:0 auto; display:grid; gap:1.2rem; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
@@ -95,10 +98,16 @@
       </div>
     </section>
 
-    <!-- Current snapshot -->
+    <!-- Current conditions enriched -->
     <section class="panel" style="grid-column: span 1;">
-      <h2>Latest Point</h2>
-      <div id="latest" class="grid"></div>
+      <h2>Current Conditions</h2>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <img id="icon" alt="icon" style="width:72px;height:72px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));" />
+        <div style="flex:1;">
+          <div id="currentSummary" style="font-size:.85rem; line-height:1.3"></div>
+        </div>
+      </div>
+      <div id="metrics" class="grid" style="margin-top:.75rem"></div>
     </section>
 
     <!-- Chart -->
@@ -109,6 +118,12 @@
       </div>
     </section>
 
+    <!-- Additional details -->
+    <section class="panel" style="grid-column: span 2;">
+      <h2>Details</h2>
+      <div id="details" class="grid"></div>
+    </section>
+
     <!-- Log / status -->
     <section class="panel" style="grid-column: span 2;">
       <h2>Status</h2>
@@ -117,13 +132,16 @@
   </main>
 
   <footer>
-    Data aggregated from stored observations. Most recent point approximates current conditions.
+    Data aggregated from stored observations. Latest metrics from most recent document.
   </footer>
 
   <script>
     const q = (sel)=>document.querySelector(sel);
     const statusEl = q('#status');
-    const latestEl = q('#latest');
+    const metricsEl = q('#metrics');
+    const detailsEl = q('#details');
+    const iconEl = q('#icon');
+    const currentSummaryEl = q('#currentSummary');
     const summaryEl = q('#summary');
     let chart;
     let autoTimer;
@@ -133,14 +151,53 @@
       statusEl.textContent = `[${ts}] ${msg}\n` + statusEl.textContent.slice(0, 4000);
     }
 
-    function renderLatest(point){
-      if(!point){ latestEl.innerHTML = '<div class="muted">No data.</div>'; return; }
-      const time = new Date(point.timestamp).toLocaleString();
-      const html = `
-        <div class="kv"><div class="v">${point.avg_temp_c?.toFixed(2)}°C</div><div class="k">Temp</div></div>
-        <div class="kv"><div class="v">${time}</div><div class="k">Timestamp</div></div>
+    function renderBucketLatest(point){
+      // Called for series latest fallback when current endpoint not used
+      if(!point){ return; }
+      currentSummaryEl.innerHTML = `Bucket Latest Temp <strong>${point.avg_temp_c?.toFixed(2)}°C</strong> @ ${new Date(point.timestamp).toLocaleTimeString()}`;
+    }
+    // Backwards alias for older references
+    const renderLatest = renderBucketLatest;
+
+    function renderCurrent(data){
+      if(!data){
+        currentSummaryEl.innerHTML = '<span class="muted">No current observation.</span>';
+        metricsEl.innerHTML = '';
+        detailsEl.innerHTML = '';
+        iconEl.src='';
+        return;
+      }
+      const w = data.weather || {};
+      iconEl.src = w.icon_url || '';
+      const desc = [w.main, w.description].filter(Boolean).join(' • ');
+      currentSummaryEl.innerHTML = `<strong>${data.city}</strong><br>${desc || 'N/A'}<br><span class="muted">Observed ${new Date(data.observation_time_iso || data.source_timestamp_iso).toLocaleString()}</span>`;
+      const t = data.temperature || {};
+      const sun = data.sun || {};
+      const pressure = data.pressure || {};
+      const wind = data.wind || {};
+      const blocks = [
+        ['Temp', t.temp_c, '°C'],
+        ['Feels', t.feels_like_c, '°C'],
+        ['Min', t.min_c, '°C'],
+        ['Max', t.max_c, '°C'],
+        ['Humid', data.humidity_pct, '%'],
+        ['Pressure', pressure.hpa, 'hPa'],
+        ['SeaLvl', pressure.sea_level_hpa, 'hPa'],
+        ['Ground', pressure.ground_level_hpa, 'hPa'],
+        ['Wind', wind.speed_ms, 'm/s'],
+        ['Clouds', data.cloud_coverage_pct, '%'],
+        ['Visib', data.visibility_m, 'm'],
+      ];
+      metricsEl.innerHTML = blocks.map(([k,v,u])=>`<div class="kv"><div class="v">${v===undefined||v===null?'–':v}</div><div class="k">${k}${u?'' : ''}</div></div>`).join('');
+      const deg = wind.deg;
+      const arrow = deg!==undefined && deg!==null ? `<div style='transform:rotate(${deg}deg);'>🡱</div>` : '–';
+      detailsEl.innerHTML = `
+        <div class="kv"><div class="v">${data.country||'–'}</div><div class="k">Country</div></div>
+        <div class="kv"><div class="v">${data.coords?.lat ?? '–'}, ${data.coords?.lon ?? '–'}</div><div class="k">Coords</div></div>
+        <div class="kv"><div class="v">${sun.sunrise_iso? new Date(sun.sunrise_iso).toLocaleTimeString(): '–'}</div><div class="k">Sunrise</div></div>
+        <div class="kv"><div class="v">${sun.sunset_iso? new Date(sun.sunset_iso).toLocaleTimeString(): '–'}</div><div class="k">Sunset</div></div>
+        <div class="kv"><div class="v">${arrow}</div><div class="k">Wind Dir</div></div>
       `;
-      latestEl.innerHTML = html;
     }
 
     function toCsv(data){
@@ -172,18 +229,39 @@
           if(!resp.ok) throw new Error('HTTP '+resp.status);
           data = await resp.json();
           if(!Array.isArray(data.points) || !data.points.length){
-            renderLatest(null); summaryEl.textContent='No daily points'; log('No daily data.'); if(chart) chart.destroy(); return;
+            renderBucketLatest(null); summaryEl.textContent='No daily points'; log('No daily data.'); if(chart) chart.destroy(); return;
           }
           const labels = data.points.map(p=>p.date);
           const temps = data.points.map(p=>p.avg_temp_c);
+          const dailyIcons = data.points.map(p=>p.icon_url);
+          const dailyIconImages = dailyIcons.map(src=>{ if(!src) return null; const img = new Image(); img.src = src; return img; });
           if(chart) chart.destroy();
           chart = new Chart(q('#chart'), {
-            type:'bar',
-            data:{ labels, datasets:[{ label:`${data.city} Daily Avg °C`, data:temps, backgroundColor:'rgba(77,171,247,.4)', borderColor:'var(--accent)', borderWidth:1 }] },
-            options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ title:{ display:true, text:'Avg Temp (°C)' } } } }
+            type:'line',
+            data:{
+              labels,
+              datasets:[{
+                label:`${data.city} Daily Avg °C`,
+                data:temps,
+                borderColor:'var(--accent)',
+                backgroundColor:'rgba(77,171,247,.15)',
+                pointRadius:6,
+                pointHoverRadius:8,
+                tension:.25,
+                fill:true,
+                pointStyle:(ctx)=> dailyIconImages[ctx.dataIndex] || 'circle'
+              }]
+            },
+            options:{
+              responsive:true,
+              maintainAspectRatio:false,
+              interaction:{ mode:'nearest', intersect:false },
+              plugins:{ legend:{ display:true }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.parsed.y.toFixed(2)} °C` } } },
+              scales:{ y:{ title:{ display:true, text:'Avg Temp (°C)' }, grid:{ color:'rgba(255,255,255,.06)' } }, x:{ grid:{ display:false } } }
+            }
           });
           // Latest = last day
-          renderLatest({ timestamp: labels[labels.length-1], avg_temp_c: temps[temps.length-1] });
+          renderBucketLatest({ timestamp: labels[labels.length-1], avg_temp_c: temps[temps.length-1] });
           summaryEl.textContent = `${data.points.length} days • window ${data.window_days}d`;
           log('Loaded daily series.');
           return;
@@ -195,7 +273,7 @@
         if(!resp.ok) throw new Error('HTTP '+resp.status);
         data = await resp.json();
         if(!Array.isArray(data.points) || data.points.length===0){
-          renderLatest(null);
+          renderBucketLatest(null);
           summaryEl.textContent = 'No points';
           log('No data returned.');
           if(chart) chart.destroy();
@@ -203,19 +281,31 @@
         }
         const labels = data.points.map(p=>new Date(p.timestamp).toLocaleTimeString());
         const temps = data.points.map(p=>p.avg_temp_c);
+        const icons = data.points.map(p=>p.icon_url);
+        const iconImages = icons.map(src=>{ if(!src) return null; const img = new Image(); img.src = src; return img; });
         if(chart) chart.destroy();
         chart = new Chart(q('#chart'), {
           type:'line',
-            data:{ labels, datasets:[{ label:`${data.city} °C`, data:temps, borderColor:'var(--accent)', backgroundColor:'rgba(77,171,247,.15)', pointRadius:3, pointHoverRadius:5, tension:.25, fill:true }] },
-            options:{
-              responsive:true,
-              maintainAspectRatio:false,
-              interaction:{ mode:'nearest', intersect:false },
-              plugins:{ legend:{ display:true }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.parsed.y.toFixed(2)} °C` } } },
-              scales:{ y:{ title:{ display:true, text:'Temp (°C)' }, grid:{ color:'rgba(255,255,255,.06)' } }, x:{ grid:{ display:false } } }
-            }
+          data:{ labels, datasets:[{ 
+            label:`${data.city} °C`, 
+            data:temps, 
+            borderColor:'var(--accent)', 
+            backgroundColor:'rgba(77,171,247,.15)', 
+            pointRadius:6, 
+            pointHoverRadius:8, 
+            tension:.25, 
+            fill:true,
+            pointStyle:(ctx)=> iconImages[ctx.dataIndex] || 'circle'
+          }]},
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            interaction:{ mode:'nearest', intersect:false },
+            plugins:{ legend:{ display:true }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.parsed.y.toFixed(2)} °C` } } },
+            scales:{ y:{ title:{ display:true, text:'Temp (°C)' }, grid:{ color:'rgba(255,255,255,.06)' } }, x:{ grid:{ display:false } } }
+          }
         });
-        renderLatest(data.points[data.points.length-1]);
+        renderBucketLatest(data.points[data.points.length-1]);
         summaryEl.textContent = `${data.points.length} pts • bucket ${data.bucket_minutes}m • window ${data.window_minutes}m`;
         log('Loaded successfully.');
       } catch(err){
@@ -232,7 +322,7 @@
 
     q('#auto').addEventListener('change', scheduleAuto);
     q('#interval').addEventListener('change', scheduleAuto);
-    q('#load').addEventListener('click', ()=>{ load(); scheduleAuto(); });
+    q('#load').addEventListener('click', ()=>{ load(); fetchCurrent(); scheduleAuto(); });
     document.querySelectorAll('input[name="view"]').forEach(r=>{
       r.addEventListener('change', ()=>{
         const isDaily = currentView()==='daily';
@@ -258,7 +348,22 @@
       html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
     });
 
+    async function fetchCurrent(){
+      const city = q('#city').value.trim();
+      try {
+        const resp = await fetch(`/api/current?city=${encodeURIComponent(city)}`);
+        if(!resp.ok){ throw new Error('HTTP '+resp.status); }
+        const data = await resp.json();
+        renderCurrent(data);
+        log('Current updated.');
+      } catch(e){
+        renderCurrent(null);
+        log('Current fetch failed: '+e.message);
+      }
+    }
+
     load();
+    fetchCurrent();
   </script>
 </body>
 </html>

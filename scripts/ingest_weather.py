@@ -13,7 +13,7 @@ import grpc
 from datetime import datetime
 
 import proto.weather_pb2 as weather_pb2 
-import weather_pb2_grpc 
+import proto.weather_pb2_grpc as weather_pb2_grpc
 from core.settings import settings  
 
 API_KEY = settings.GRPC_API_KEY or "changeme"
@@ -32,7 +32,7 @@ def fetch_once(stub, city: str):
 def main():
     parser = argparse.ArgumentParser(description="Weather ingestion loop")
     parser.add_argument("--city", required=True, help="City to ingest")
-    parser.add_argument("--interval", type=int, default=300, help="Seconds between ingests (default 300)")
+    parser.add_argument("--interval", type=int, default=10, help="Seconds between ingests (default 300)")
     parser.add_argument("--address", default=DEFAULT_ADDRESS, help="gRPC server host:port")
     args = parser.parse_args()
 

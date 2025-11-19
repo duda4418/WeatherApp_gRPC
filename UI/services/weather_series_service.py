@@ -28,7 +28,11 @@ class WeatherSeriesService:
                 for data in raw
             ]
         points: List[SeriesPoint] = [
-            SeriesPoint(timestamp=obs["timestamp"], avg_temp_c=obs.get("avg_temp_c", 0.0))
+            SeriesPoint(
+                timestamp=obs["timestamp"],
+                avg_temp_c=obs.get("avg_temp_c", 0.0),
+                icon=obs.get("icon")
+            )
             for obs in observations
         ]
         return points
@@ -37,4 +41,11 @@ class WeatherSeriesService:
         series = self.repo.get_daily_series(city, days)
         if not series:
             return []
-        return [DailyPoint(date=s["date"], avg_temp_c=s.get("avg_temp_c", 0.0)) for s in series]
+        return [
+            DailyPoint(
+                date=day["date"],
+                avg_temp_c=day.get("avg_temp_c", 0.0),
+                icon=day.get("icon")
+            )
+            for day in series
+        ]
