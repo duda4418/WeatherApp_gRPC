@@ -10,7 +10,6 @@ __all__ = ["CamelModel", "to_camel"]
 
 
 def to_camel(s: str) -> str:
-	#Convert a snake_case string to a camelCase string.
 	parts = s.split("_")
 	if not parts:
 		return s
