@@ -1,5 +1,6 @@
 import os  # kept for potential future non-settings env lookups
 import time
+import logging
 from concurrent import futures
 from datetime import datetime, UTC
 from typing import Optional
@@ -13,6 +14,9 @@ from db.mongo_repository import MongoRepository
 from pydantic import BaseModel, Field
 
 from core.settings import settings
+
+logger = logging.getLogger("weather_server")
+logging.basicConfig(level=settings.resolved_log_level(), format="%(asctime)s %(levelname)s %(name)s - %(message)s")
 
 OPENWEATHER_KEY = settings.OPENWEATHER_API_KEY
 GRPC_API_KEY = settings.GRPC_API_KEY
@@ -89,7 +93,7 @@ class WeatherService(weather_pb2_grpc.WeatherServiceServicer):
             })
         except Exception as persist_err:
             # Log to stdout for now; in production use structured logging
-            print(f"[WARN] Failed to persist observation: {persist_err}")
+            logger.warning("Failed to persist observation: %s", persist_err, exc_info=True)
             # Do not abort the whole RPC; requirements focus on returning weather.
             # Optionally could context.abort(StatusCode.UNAVAILABLE, 'Persistence error')
             pass
@@ -109,7 +113,7 @@ def serve():
     port = str(settings.GRPC_PORT)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    print(f'gRPC WeatherService running on port {port}')
+    logger.info('gRPC WeatherService running on port %s', port)
     try:
         while True:
             time.sleep(86400)
