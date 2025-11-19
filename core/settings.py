@@ -71,6 +71,13 @@ class Settings(BaseSettings):
         if not self.MONGO_URI:
             raise RuntimeError("MONGO_URI is not set in environment")
         return self.MONGO_URI
+    LOG_LEVEL: str = "INFO"  # Override in .env (e.g., DEBUG, WARNING)
+    
+    def resolved_log_level(self) -> int:
+        """Return numeric logging level from LOG_LEVEL string with fallback to INFO."""
+        import logging
+        name = (self.LOG_LEVEL or "INFO").upper()
+        return getattr(logging, name, logging.INFO)
 
 
 settings = Settings()
