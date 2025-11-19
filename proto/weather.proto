@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package weather;
 
-// Minimal service per requirements: only current weather retrieval.
 service WeatherService {
   rpc GetCurrentWeather (GetWeatherRequest) returns (GetWeatherResponse);
 }

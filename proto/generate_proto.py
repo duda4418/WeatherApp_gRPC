@@ -10,8 +10,8 @@ from pathlib import Path
 import sys
 from grpc_tools import protoc
 
-PROTO_DIR = Path('proto')
-OUT_DIR = Path('.')
+PROTO_DIR = Path('')
+OUT_DIR = Path('..')
 PROTO_FILE = 'weather.proto'
 
 def main() -> int:

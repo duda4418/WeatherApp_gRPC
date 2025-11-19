@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
 from pymongo import MongoClient
@@ -61,5 +61,41 @@ class MongoRepository:
             out.append({
                 "timestamp": bucket["timestamp"],
                 "avg_temp_c": bucket.get("avg_temp", 0.0)
+            })
+        return out
+
+    def get_daily_series(self, city: str, days: int) -> List[Dict[str, Any]]:
+        """Return average temperature per day for the last `days` days (inclusive of today).
+
+        Groups observations by calendar day (UTC) and computes average `temp_c`.
+        """
+        if days < 1:
+            return []
+        end = datetime.utcnow()
+        start = end.replace(hour=0, minute=0, second=0, microsecond=0)  # today 00:00
+        start = start - timedelta(days=days - 1)
+        pipeline = [
+            {"$match": {"city": city, "observation_time": {"$gte": start, "$lte": end}}},
+            {"$group": {
+                "_id": {
+                    "y": {"$year": "$observation_time"},
+                    "m": {"$month": "$observation_time"},
+                    "d": {"$dayOfMonth": "$observation_time"},
+                },
+                "avg_temp": {"$avg": "$temp_c"},
+                "first_ts": {"$min": "$observation_time"}
+            }},
+            {"$project": {
+                "day_start": {"$dateFromParts": {"year": "$_id.y", "month": "$_id.m", "day": "$_id.d"}},
+                "avg_temp": 1,
+                "first_ts": 1
+            }},
+            {"$sort": {"day_start": 1}}
+        ]
+        out: List[Dict[str, Any]] = []
+        for doc in self._col.aggregate(pipeline):
+            out.append({
+                "date": doc["day_start"].date().isoformat(),
+                "avg_temp_c": doc.get("avg_temp", 0.0)
             })
         return out

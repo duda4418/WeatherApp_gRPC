@@ -11,10 +11,10 @@ import time
 import argparse
 import grpc
 from datetime import datetime
-import weather_pb2
-import weather_pb2_grpc
 
-from core.settings import settings
+import proto.weather_pb2 as weather_pb2 
+import weather_pb2_grpc 
+from core.settings import settings  
 
 API_KEY = settings.GRPC_API_KEY or "changeme"
 DEFAULT_ADDRESS = settings.GRPC_ADDRESS
