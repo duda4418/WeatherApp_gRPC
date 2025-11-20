@@ -1,4 +1,3 @@
-import os  # kept for potential future non-settings env lookups
 import time
 import logging
 from concurrent import futures
@@ -8,8 +7,8 @@ from typing import Optional
 import grpc
 import requests
 
-import weather_pb2
-import weather_pb2_grpc
+import proto.weather_pb2 as weather_pb2
+import proto.weather_pb2_grpc as weather_pb2_grpc
 from db.mongo_repository import MongoRepository
 from pydantic import BaseModel, Field
 
@@ -92,10 +91,7 @@ class WeatherService(weather_pb2_grpc.WeatherServiceServicer):
                 'raw': data
             })
         except Exception as persist_err:
-            # Log to stdout for now; in production use structured logging
             logger.warning("Failed to persist observation: %s", persist_err, exc_info=True)
-            # Do not abort the whole RPC; requirements focus on returning weather.
-            # Optionally could context.abort(StatusCode.UNAVAILABLE, 'Persistence error')
             pass
         return weather_pb2.GetWeatherResponse(
             city=normalized.city,

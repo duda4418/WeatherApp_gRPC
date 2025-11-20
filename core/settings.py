@@ -4,20 +4,24 @@ Loads essential service credentials and connection strings from `.env` using
 Pydantic's settings management. Fields mirror the provided `.env` file.
 
 Available settings:
-	- OPENWEATHER_API_KEY: API key for OpenWeather requests
-	- GRPC_API_KEY: Shared secret for gRPC client/server auth (x-api-key metadata)
-	- MONGO_URI: MongoDB connection string
+    - OPENWEATHER_API_KEY: API key for OpenWeather requests
+    - GRPC_API_KEY: Shared secret for gRPC client/server auth (x-api-key metadata)
+    - MONGO_URI: MongoDB connection string
+    - LOG_LEVEL: Logging verbosity (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
 Example:
-	from core.settings import settings
-	if not settings.OPENWEATHER_API_KEY:
-		raise RuntimeError("OPENWEATHER_API_KEY missing")
-	repo_uri = settings.MONGO_URI
+    from core.settings import settings
+    settings.configure_logging()  # sets root logging per LOG_LEVEL
+    logger = logging.getLogger(__name__)
+    logger.info("Started")
 """
 
 from __future__ import annotations
+import logging
+
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 
 __all__ = ["Settings", "settings"]
 
@@ -73,11 +77,37 @@ class Settings(BaseSettings):
         return self.MONGO_URI
     LOG_LEVEL: str = "INFO"  # Override in .env (e.g., DEBUG, WARNING)
     
+    @field_validator("LOG_LEVEL")
+    def _validate_log_level(cls, v: str) -> str:  # noqa: D401
+        """Ensure LOG_LEVEL is one of the standard logging level names."""
+        if not v:
+            return "INFO"
+        name = v.upper()
+        if name not in {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"}:
+            raise ValueError(f"Invalid LOG_LEVEL '{v}'. Expected one of DEBUG, INFO, WARNING, ERROR, CRITICAL")
+        return name
+
     def resolved_log_level(self) -> int:
         """Return numeric logging level from LOG_LEVEL string with fallback to INFO."""
-        import logging
-        name = (self.LOG_LEVEL or "INFO").upper()
-        return getattr(logging, name, logging.INFO)
+        return getattr(logging, self.LOG_LEVEL, logging.INFO)
+
+    def configure_logging(self, *, force: bool = False) -> None:
+        """Initialize basic logging configuration once for the application.
+
+        Call early (e.g., at process entry) so modules obtaining loggers after
+        import inherit the desired level and format.
+
+        Parameters
+        ----------
+        force: bool
+            If True, reconfigure even if handlers already exist (passes force to
+            logging.basicConfig). Use cautiously; default False preserves existing handlers.
+        """
+        logging.basicConfig(
+            level=self.resolved_log_level(),
+            format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+            force=force,
+        )
 
 
 settings = Settings()
