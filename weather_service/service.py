@@ -11,7 +11,6 @@ import grpc
 import proto.weather_pb2 as weather_pb2
 import proto.weather_pb2_grpc as weather_pb2_grpc
 from weather_service.models import WeatherNormalized
-from weather_service.repository import WeatherRepository
 from weather_service.errors import (
     UpstreamNotFoundError,
     UpstreamHttpError,
@@ -23,11 +22,10 @@ logger = logging.getLogger("weather_service.service")
 
 
 class WeatherService(weather_pb2_grpc.WeatherServiceServicer):
-    def __init__(self, repo: WeatherRepository, provider):  # provider duck-types OpenWeatherClient
-        self.repo = repo
+    def __init__(self, repo, provider): 
         self.provider = provider
 
-    def GetCurrentWeather(self, request, context):  # noqa: N802 (proto naming requirement)
+    def GetCurrentWeather(self, request, context): 
         city = request.city.strip()
         if not city:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "City required")
@@ -66,7 +64,7 @@ class WeatherService(weather_pb2_grpc.WeatherServiceServicer):
                 "conditions": normalized.conditions,
                 "raw": data,
             })
-        except Exception as persist_err:  # graceful degradation on persistence failure
+        except Exception as persist_err:  
             logger.warning("Failed to persist observation: %s", persist_err, exc_info=True)
         return weather_pb2.GetWeatherResponse(
             city=normalized.city,

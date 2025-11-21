@@ -18,9 +18,9 @@ from weather_service.providers.openweather_client import OpenWeatherClient
 logger = logging.getLogger("weather_service.server")
 
 
-def serve(*, port: int | None = None, repo=None, provider=None) -> None:  # noqa: D401
+def serve(*, port: int | None = None, repo=None, provider=None) -> None: 
     """Start the gRPC server with injected dependencies (optional overrides)."""
-    settings.configure_logging()  # ensure logging configured once
+    settings.configure_logging()  
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=10),
         interceptors=[ApiKeyInterceptor()],
@@ -39,5 +39,5 @@ def serve(*, port: int | None = None, repo=None, provider=None) -> None:  # noqa
         server.stop(0)
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__": 
     serve()

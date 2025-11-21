@@ -41,6 +41,5 @@ class OpenWeatherClient:
         # Basic invariant sanity check
         if "main" not in data:
             raise UpstreamInvalidResponse("Missing 'main' section in response")
-        # Attach retrieval timestamp for convenience
         data.setdefault("_fetched_at", datetime.now(UTC).isoformat())
         return data

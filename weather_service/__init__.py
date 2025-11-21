@@ -9,7 +9,7 @@ Modules:
     errors: Typed exceptions for mapping to gRPC status codes.
 """
 
-from .service import WeatherService  # re-export for convenience
-from .server import serve  # convenience entrypoint
+from .service import WeatherService  
+from .server import serve  
 
 __all__ = ["WeatherService", "serve"]
