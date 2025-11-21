@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List, Dict, Any
 
 from pymongo import MongoClient
@@ -18,9 +18,9 @@ class MongoRepository:
 
     def insert_observation(self, doc: Dict[str, Any]) -> str:
         # Ensure required fields
-        doc.setdefault("fetched_at", datetime.utcnow())
+        doc.setdefault("fetched_at", datetime.now(UTC))
         if not isinstance(doc.get("observation_time"), datetime):
-            doc["observation_time"] = doc.get("fetched_at", datetime.utcnow())
+            doc["observation_time"] = doc.get("fetched_at", datetime.now(UTC))
         res = self._col.insert_one(doc)
         return str(res.inserted_id)
 
@@ -79,7 +79,7 @@ class MongoRepository:
         """
         if days < 1:
             return []
-        end = datetime.utcnow()
+        end = datetime.now(UTC)
         start = end.replace(hour=0, minute=0, second=0, microsecond=0)  # today 00:00
         start = start - timedelta(days=days - 1)
         pipeline = [

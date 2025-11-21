@@ -23,6 +23,8 @@ logger = logging.getLogger("weather_service.service")
 
 class WeatherService(weather_pb2_grpc.WeatherServiceServicer):
     def __init__(self, repo, provider): 
+        # Store repository and provider references for later use
+        self.repo = repo
         self.provider = provider
 
     def GetCurrentWeather(self, request, context): 
