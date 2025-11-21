@@ -1,18 +1,8 @@
+
 import types
 import pytest
 import weather_service.providers.openweather_client as ow
-
-
-class DummyResponse:
-    def __init__(self, status_code=200, json_data=None, raise_json=False):
-        self.status_code = status_code
-        self._json = json_data or {}
-        self._raise_json = raise_json
-
-    def json(self):
-        if self._raise_json:
-            raise ValueError("bad json")
-        return self._json
+from tests.helpers import DummyResponse
 
 
 def test_openweather_success(monkeypatch):

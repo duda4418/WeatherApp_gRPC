@@ -1,11 +1,7 @@
-import grpc
+
 import pytest
 from weather_service.interceptors import ApiKeyInterceptor
-
-
-class DummyHandlerCallDetails:
-    def __init__(self, metadata):
-        self.invocation_metadata = metadata
+from tests.helpers import DummyHandlerCallDetails, DummyContext
 
 
 def test_interceptor_rejects_bad_key():
@@ -14,13 +10,6 @@ def test_interceptor_rejects_bad_key():
         return "ok"
     details = DummyHandlerCallDetails([("x-api-key", "bad")])
     handler = interceptor.intercept_service(cont, details)
-    # Returns a handler that will abort; simulate call
-    class DummyContext:
-        def __init__(self):
-            self.aborted = False
-        def abort(self, code, message):
-            self.aborted = True
-            raise RuntimeError("aborted")
     with pytest.raises(RuntimeError):
         handler.unary_unary(None, DummyContext())  # type: ignore[attr-defined]
 

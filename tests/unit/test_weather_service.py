@@ -1,39 +1,10 @@
+
 from datetime import UTC, datetime
 import pytest
 import proto.weather_pb2 as weather_pb2
 from weather_service.service import WeatherService
 from weather_service.errors import UpstreamNotFoundError
-
-
-class FakeRepo:
-    def __init__(self):
-        self.inserted = []
-    def insert_observation(self, doc):
-        self.inserted.append(doc)
-        return "id"
-
-
-class FakeProvider:
-    def __init__(self, data=None, error=None):
-        self._data = data
-        self._error = error
-    def get_current(self, city):
-        if self._error:
-            raise self._error
-        return self._data or {
-            "name": city,
-            "main": {"temp": 11.1, "humidity": 50},
-            "weather": [{"description": "few clouds"}],
-            "wind": {"speed": 2.5},
-        }
-
-
-class DummyContext:
-    def __init__(self):
-        self.aborted = None
-    def abort(self, code, message):
-        self.aborted = (code, message)
-        raise RuntimeError(f"aborted: {code} {message}")
+from tests.helpers import FakeRepo, FakeProvider, DummyContext
 
 
 def test_weather_service_happy_path():
