@@ -87,4 +87,4 @@ MIT
 - [duda4418](https://github.com/duda4418)
 
 ---
-Enjoy building with WeatherApp_gRPC! For questions or issues, open a GitHub issue or contact the maintainer.
+
